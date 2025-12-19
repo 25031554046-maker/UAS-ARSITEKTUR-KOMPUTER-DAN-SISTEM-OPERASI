@@ -1,13 +1,13 @@
-FROM python:3.11-slim
+FROM node:18-alpine
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY package*.json ./
 
-RUN pip install --no-cache-dir -r requirements.txt
+RUN npm install
 
 COPY . .
 
-EXPOSE 3002
+EXPOSE 3001
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "3002"]
+CMD ["npm", "start"]
