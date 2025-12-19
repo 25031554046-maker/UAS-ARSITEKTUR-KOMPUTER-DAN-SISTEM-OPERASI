@@ -1,0 +1,106 @@
+services:
+  api-gateway:
+    # PENAMBAHAN: Konfigurasi untuk API Gateway
+    image: nginx:alpine  
+    container_name: api-gateway 
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - auth-service
+    networks:
+      - microservices-network
+    ports:
+      # TASK OPSIONAL 2: Mengubah exposed port dari 8080 menjadi 8081
+      - "8081:80"  
+
+  # Auth Service
+  auth-service:
+    build: ./auth-service
+    # PENAMBAHAN: Konfigurasi untuk Auth Service
+    container_name: auth-service  
+    depends_on:
+      - auth-db
+    environment:
+      - NODE_ENV=development  
+      - PORT=3001  
+      - MONGO_URI=mongodb://auth-db:27017/auth  
+      - JWT_SECRET=8f9a2b5e7c3d1f4a6b8e9c2d5f7a1b3e4c6d8f9a2b5e7c3d1f4a6b8e9c2d5f7a  
+    networks:
+      - microservices-network
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./auth-service:/app
+      - /app/node_modules
+    # TASK OPSIONAL 3: Membatasi sumber daya CPU dan RAM
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'      
+          memory: 512M     
+
+  # Auth Database
+  auth-db:
+    # PENAMBAHAN: Konfigurasi untuk Auth Database
+    image: mongo:6.0  
+    container_name: auth-db  
+    volumes:
+      - auth-data:/data/db
+    networks:
+      - microservices-network
+    ports:
+      - "27017:27017"
+    # TASK OPSIONAL 4: Melakukan auto-restart jika berhenti
+    restart: always  
+
+  # Acad Service
+  # PENAMBAHAN: Konfigurasi untuk Acad Service
+  acad-service:
+    build: ./acad-service
+    container_name: acad-service
+    depends_on:
+     - acad-db
+    environment:
+     - DB_HOST=acad-db
+     - DB_PORT=5432
+     - DB_NAME=acad_db
+     - DB_USER=acaduser
+     - DB_PASSWORD=acadpass
+    networks:
+     - microservices-network
+    ports:
+     - "3002:3002"
+    volumes:
+     - ./acad-service:/app
+  
+  # Acad DB
+  # PENAMBAHAN: Konfigurasi untuk Acad Database (PostgreSQL)
+  acad-db:
+   image: postgres:15-alpine 
+   container_name: acad-db
+   environment:
+    - POSTGRES_DB=acad_db
+    - POSTGRES_USER=acaduser
+    - POSTGRES_PASSWORD=acadpass
+   volumes: 
+    - acad-data:/var/lib/postgresql/data 
+    - ./acad-service/db_kelas.sql:/docker-entrypoint-initdb.d/init.sql
+   networks:
+    - microservices-network
+   ports: 
+    - "5432:5432"
+   restart: always
+  
+networks:
+ microservices-network:
+  driver: bridge
+    # ⭐ TASK OPSIONAL 1: Mendefinisikan ruang alamat memori dengan sub-jaringan 172.16.0.0/28
+  ipam:
+   config:
+        - subnet: 172.16.0.0/28  
+
+volumes:
+  auth-data:      
+  product-data:   
+  order-data:     
+  acad-data:      
